@@ -1,0 +1,54 @@
+Exercise Part 1:
+##Form Initial Understanding
+
+Based on the package imports in TaskManager.Java, I can say this project follows a clean Layered Architecture.
+
+It keeps the data, the program's logic, and the saving system in separate, organized packages.
+TaskManager.app: Holds the core business logic and controls the application behavior.
+TaskManager.model: Contains the core data structures and domain entities representing a task
+TaskManager.storage: Handles data persistence, saving, and loading task information.
+
+##Technolgies and Frameworks
+
+Language: Java
+Build Tool: Maven to manage the project.
+Storage Format: JSON to save the tasks.
+
+#Main Components
+
+TaskManager.model:
+This component defines the core data structure of a Task, acting as the project's foundation by holding information like task names, deadlines, and statuses without making any business decisions.
+
+TaskManager.storage:
+This component manages data persistence by saving and loading task information to and from the computer's hard drive,i think it uses lightweight files like JSON to keep data safe when the app closes.
+
+TaskManager.app:
+This component acts as the central brain of the application, running the core business logic and
+coordinating between the user, the data models, and the storage system to keep the app working smoothly.
+
+#Understanding Project Structure and Technology Stack prompt with AI
+
+My Initial Onboarding FindingsI analyzed the TaskManager.java file to map out our project structure and technology stack. Here is my current assessment
+
+Architectural Pattern: Confirmed Layered Architecture. The codebase cleanly decouples our domain state (model), data persistence (storage), and core business logic (app).
+Technology Stack: Uses Java 8+ features (Streams for metrics, java.time.\* for formatting) and Maven for build management. Data persistence runs locally on the file system via a string path, likely using JSON for serialization.
+Key Components & Responsibilities:taskmanager.model: Simple blueprint data containers (Task, enums) holding state, tags, and deadlines.taskmanager.storage: The I/O gatekeeper handling active disk read/write cycles to save tasks.taskmanager.app: The central brain executing validations, data filtering, and statistic generation.
+
+Comparison & Corrected MisconceptionsThe UI Misconception:
+
+I originally thought TaskManager drove the entire application execution. Looking closer, it contains no console printing commands or user interface loops. It is strictly a backend logic engine.
+Missing Entry Point: I noticed TaskManager.java lacks a public static void main method. The physical entry point must live in a separate file like Main.java or App.java that instantiates this engine.Memory vs. Database Analytics: The getStatistics method doesn't run external database queries. It dynamically aggregates active file records in-memory using Java HashMap collections.
+
+Exercise Part 2:
+
+I ran an internal code search across the provided codebase to determine how to best integrate the new "Task Export to CSV" feature requested by the team lead.
+Search Terms Used: save, storage, write, File, export, FileI/O
+Existing Files Found: TaskManager.java (References to an external file called TaskStorage.java)
+
+Initial Observations & Findings
+Existing File Operations:
+The codebase delegates all physical disk operations to TaskStorage. For example, storage.save() is triggered during updates to write the task state to the disk using the file path string variable storagePath.
+Data Transformation:
+The getStatistics() method shows that the application frequently uses Java Streams (.stream()) and lambda filters to loop through, reshape, and collect task objects in memory. This pattern is highly reusable for processing data before a file export.
+Reusable Utilities:
+storage.getAllTasks() returns a complete list of task records (List<Task>). This serves as the precise data payload needed for a CSV export loop.
