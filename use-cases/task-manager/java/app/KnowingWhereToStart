@@ -1,0 +1,149 @@
+Exercise Part 1: Understanding Project Structure
+Form Initial Understanding
+
+Based on the package imports in TaskManager.Java, I can say this project follows a clean Layered Architecture.
+
+It keeps the data, the program's logic, and the saving system in separate, organized packages.
+TaskManager.app: Holds the core business logic and controls the application behavior.
+TaskManager.model: Contains the core data structures and domain entities representing a task
+TaskManager.storage: Handles data persistence, saving, and loading task information.
+
+Technolgies and Frameworks
+
+Language: Java
+Build Tool: Maven to manage the project.
+Storage Format: JSON to save the tasks.
+
+Main Components
+
+TaskManager.model:
+This component defines the core data structure of a Task, acting as the project's foundation by holding information like task names, deadlines, and statuses without making any business decisions.
+
+TaskManager.storage:
+This component manages data persistence by saving and loading task information to and from the computer's hard drive,i think it uses lightweight files like JSON to keep data safe when the app closes.
+
+TaskManager.app:
+This component acts as the central brain of the application, running the core business logic and
+coordinating between the user, the data models, and the storage system to keep the app working smoothly.
+
+Understanding Project Structure and Technology Stack prompt with AI
+
+My Initial Onboarding FindingsI analyzed the TaskManager.java file to map out our project structure
+and technology stack. Here is my current assessment
+Architectural Pattern: Confirmed Layered Architecture. The codebase cleanly decouples our domain
+state (model), data persistence (storage), and core business logic (app).
+Technology Stack: Uses Java 8+ features (Streams for metrics, java.time.\* for formatting) and
+Maven for build management. Data persistence runs locally on the file system via a string path,
+likely using JSON for serialization.
+Key Components & Responsibilities:taskmanager.model: Simple blueprint data containers (Task, enums
+holding state, tags, and deadlines.taskmanager.storage: The I/O gatekeeper handling active disk read/write cycles to save tasks.taskmanager.app: The central brain executing validations, data filtering, and statistic generation.
+
+Comparison & Corrected MisconceptionsThe UI Misconception:
+
+I originally thought TaskManager drove the entire application execution. Looking closer, it
+contains no console printing commands or user interface loops. It is strictly a backend logic engine.
+Missing Entry Point: I noticed TaskManager.java lacks a public static void main method. The physical entry point must live in a separate file like Main.java or App.java that instantiates this engine.Memory vs. Database Analytics: The getStatistics method doesn't run external database queries. It dynamically aggregates active file records in-memory using Java HashMap collections.
+
+Exercise Part 2: Finding Feature Implementations
+
+I ran an internal code search across the provided codebase to determine how to best integrate the
+new "Task Export to CSV" feature requested by the team lead.
+
+Search Terms Used: save, storage, write, File, export, FileI/O
+Existing Files Found: TaskManager.java (References to an external file called TaskStorage.java)
+
+Hypothesis
+
+Based on my code search for the new CSV export feature, I am confident that the new functionality
+belongs across our existing backend layers to keep the current architecture clean. The high-level
+request should live as a new method inside TaskManager.java because that class already serves as
+our main service hub and orchestrator. However, following the codebase pattern where TaskManager
+leaves all actual file I/O to TaskStorage.java, the heavy lifting of opening file streams and
+looping through rows to write the CSV formatting belongs inside the storage layer. To build this
+out without breaking anything, we will need to modify TaskStorage to add a file-writing method,
+update TaskManager to trigger it using the clean payload already provided by storage.getAllTasks(),
+and potentially add a quick string helper to Task.java to make formatting the rows easier. My
+search using terms like save, storage, and FileI/O confirmed that the data-handling patterns we
+need are already there; for instance, we can reuse the same Java Stream logic found in getStatistic
+() to filter or map our task objects smoothly before pushing them to the new file write
+
+Finding Feature Implementations Locations prompt
+
+To maintain our clean, layered architecture, the new Task Export to CSV feature will be split
+across two specific areas of the codebase. The high-level command trigger belongs as a new method
+called exportTasksToCSV(String exportPath) inside TaskManager.java (za.co.wethinkcode.taskmanager
+app), which serves as our main service layer.
+
+However, following the application's design where business logic never talks directly to the hard
+drive, the low-level file I/O operations—like opening text writers, handling headers, and closing
+file streams—will live as a new method named writeToCSV(String path, List<Task> tasks) inside
+TaskStorage.java (za.co.wethinkcode.taskmanager.storage).
+This change directly affects three existing components that work together to process and format the
+task data.
+TaskStorage.java is impacted because it must now handle text-file streaming alongside its existing
+data-saving routines.
+TaskManager.java is affected by the addition of the new orchestration gateway method that manages
+the feature request.
+Finally, Task.java (za.co.wethinkcode.taskmanager.model) will be modified to
+include a small helper method like toCSVRow() so that individual task entities can cleanly convert
+their internal properties—like titles, statuses, and deadlines—into formatted, comma-separated
+string blocks.Our implementation plan follows a structured, step-by-step pipeline to ensure safety
+and prevent regression bugs.
+First, we will add the toCSVRow() text formatting method to Task.java to set up our data columns
+cleanly. Next, we will build the core writing engine inside TaskStorage.java using a standard Java
+PrintWriter or FileWriter wrapped in a strict try-catch block to handle any unexpected local disk
+permission or data errors safely. Finally, we will hook everything together by updating TaskManager
+java to pull the active data payload from memory using storage.getAllTasks(), run it through a
+defensive null guard, and pass it directly down to the new file storage writer.
+
+Exercise Part 3: Understanding Domain Model
+
+The domain model relies on four main entity classes that serve as building blocks. The primary
+entity is Task, which holds names, descriptions, and tags. To keep data safe, the app uses
+type-safe TaskStatus and TaskPriority enums. It also utilizes a TaskStorage component that acts as
+the file gatekeeper.The business logic focuses heavily on scheduling safeguards and strict
+transitions.
+Deadlines are validated against ISO date rules and set to LocalTime.MAX. Furthermore
+when a task status shifts to TaskStatus.DONE, the engine runs task.markAsDone(). This method
+securely stamps a permanent completion timestamp onto the data record.The codebase tracks "overdue
+tasks" by filtering items past the current time. It also calculates a "completedRecently" metric to
+measure a rolling 7-day productivity window.
+Finally, it uses a unique "placeholder task" pattern
+with a temporary title. This pattern lets the system safely patch single properties without
+overwriting whole files.
+
+Entities and their relationships
+
+                      +-------------------+
+                      |    TaskStorage    |
+                      +---------+---------+
+                                |
+                                | (Manages Files)
+                                v
+                      +-------------------+
+                      |       Task        |
+                      +----+---------+----+
+                           |         |
+          (Uses Status)    |         |    (Uses Priority)
+         +-----------------+         +-----------------+
+         |                                             |
+         v                                             v
+
++------------------+ +--------------------+
+| TaskStatus | | TaskPriority |
++------------------+ +--------------------
+
+Domain Understanding prompt
+
+1. The Priority Guard (Handling Invalid Input Like 999)
+   If a user tries to pass an invalid priority integer like 999, the system throws an exception immediately before any data hits the file system. In TaskManager.java, the system calls TaskPriority.fromValue(newPriorityValue). This helper method inside our enum package validates the integer against our strict business tiers. If it doesn't match a real tier, it throws an IllegalArgumentException which halts execution and prints an error message, completely blocking the corrupted data from saving.
+2. The Audit Risk (Moving a Task Back to IN_PROGRESS)
+   Looking closely at updateTaskStatus, if a user shifts a task status back to something other than DONE, the system does not call task.markAsDone(). Instead, it uses the placeholder object pattern (new Task("tempTitle")) to update just the status parameter in storage. However, this creates a business audit risk! The original completedAt timestamp might still remain attached to the task object in our storage file even though the work is active again. This would distort our management dashboard statistics for weekly velocity.
+3. The Export Contract (Fixed CSV Column Order)
+   The column layout in a CSV file acts as a permanent structural contract for external software like Microsoft Excel or PowerBI. Even if a user filters or reorders tasks on their UI screen, the underlying toCSVRow() method must output properties in the exact same index sequence (e.g., ID, Title, Status, DueDate). If the order changed based on user screen filters, the columns would get mixed up, completely breaking any automated analytics dashboards that depend on our files.
+
+Exercise Part 4: Practical Application
+
+To implement the new abandonment policy, we need to modify TaskStatus.java to add a new ABANDONED enum state, and add an automated cleanup method called processOverduePolicies() inside TaskManager.java. This new method will fetch all records using storage.getAllTasks() and use a Java Stream to filter for tasks that are overdue, have a deadline older than seven days, and are not marked as high priority.
+The matching tasks will have their status updated to abandoned before calling storage.save() to commit the changes to the disk. Before writing the code, I need to ask the team whether this cleanup should run automatically at application boot or via a manual dashboard button, and if we should automatically append an #abandoned label to these tasks for future filtering.Reflecting on the onboarding process, the AI prompts were incredibly helpful for decoding a codebase that had zero documentation by teaching me to bypass IDE file clutter and isolate the core operational layers. While the business logic is completely clear, I am still unsure about the exact data serialization format used inside TaskStorage.java.
+My immediate next steps are to trace that file's writing engine to see how it writes to the disk, and then write a series of JUnit tests to verify that our new seven-day abandonment filter handles edge cases flawlessly before pushing the final code to GitHub.
